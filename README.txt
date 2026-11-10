@@ -1,4 +1,4 @@
-SnipScribe（当前窗口名称 FormulaSnip）
+FormulaSnip
 
 双击 Start.vbs 启动。长按右键约 650 毫秒后松开呼出，点击截图按钮并拖动框选。
 提供公式、文字、文字＋公式三个识别模式。

@@ -305,6 +305,7 @@ class Window(QWidget):
         elif self.right_started is not None:
             elapsed = time.monotonic() - self.right_started; self.right_started = None
             if self.settings['enabled'] and not self.right_moved and elapsed >= self.settings['hold_ms'] / 1000 and self.capture is None and not self.pending_capture:
+                LOG.info('Right-button wake: held %.3fs', elapsed)
                 QTimer.singleShot(60, self.show_panel)
 
     def show_panel(self, load=True):
@@ -319,6 +320,7 @@ class Window(QWidget):
                 self.load_mode()
 
     def suspend_panel(self):
+        LOG.info('Panel closed; releasing models, keeping wake listener')
         self.session_active = False
         self.cancel_work(show=False)
         self.stop_engine()
@@ -402,6 +404,7 @@ class Window(QWidget):
         else: event.ignore(); self.suspend_panel()
 
     def quit(self):
+        LOG.info('Explicit exit requested; stopping wake listener')
         self.shutting_down = True; self.poll.stop(); self.cancel_work(show=False)
         if self.engine_guard: self.engine_guard.close(); self.engine_guard = None
         if self.engine: self.engine.kill()
@@ -410,6 +413,7 @@ class Window(QWidget):
 
 def main():
     app = QApplication(sys.argv); app.setQuitOnLastWindowClosed(False)
+    LOG.info('Application starting: background=%s', '--background' in sys.argv)
     socket = QLocalSocket(); socket.connectToServer('FormulaSnip-local-v2')
     background = '--background' in sys.argv
     if socket.waitForConnected(400):
@@ -418,6 +422,7 @@ def main():
     QLocalServer.removeServer('FormulaSnip-local-v2')
     server = QLocalServer(); server.listen('FormulaSnip-local-v2')
     window = Window()
+    LOG.info('Wake listener started: enabled=%s hold_ms=%s', window.settings['enabled'], window.settings['hold_ms'])
     def incoming():
         connection = server.nextPendingConnection()
         if connection:
@@ -426,6 +431,7 @@ def main():
             connection.disconnectFromServer(); connection.deleteLater()
     server.newConnection.connect(incoming)
     app.aboutToQuit.connect(lambda: window.engine_guard.close() if window.engine_guard else None)
+    app.aboutToQuit.connect(lambda: LOG.info('Application event loop exiting'))
     if not background: window.show_panel()
     sys.exit(app.exec())
 
